@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diagnóstico de Conformidade NRs — Vale Engenharia</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --green: #1D9E75; --green-light: #E1F5EE; --green-dark: #0F6E56;
+    --amber: #BA7517; --amber-light: #FAEEDA;
+    --red: #D85A30; --red-light: #FAECE7;
+    --gray-100: #f5f5f3; --gray-200: #e8e8e5; --gray-400: #9e9d97;
+    --gray-700: #3a3a38; --gray-900: #1a1a18;
+    --radius: 10px; --shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f0ed; color: var(--gray-900); min-height: 100vh; padding: 0 0 60px; }
+  .header { background: var(--green-dark); color: #fff; padding: 28px 24px 24px; text-align: center; }
+  .header .logo-tag { display: inline-block; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.75; margin-bottom: 10px; }
+  .header h1 { font-size: 22px; font-weight: 600; margin-bottom: 6px; }
+  .header p { font-size: 13px; opacity: 0.8; line-height: 1.5; max-width: 420px; margin: 0 auto; }
+  .empresa-tag { display: inline-block; margin-top: 14px; background: rgba(255,255,255,0.15); border-radius: 20px; padding: 4px 14px; font-size: 12px; font-weight: 500; }
+  .progress-section { background: #fff; padding: 16px 20px; border-bottom: 1px solid var(--gray-200); position: sticky; top: 0; z-index: 10; box-shadow: var(--shadow); }
+  .progress-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+  .progress-label { font-size: 13px; color: var(--gray-400); white-space: nowrap; }
+  .progress-pct { font-size: 16px; font-weight: 600; color: var(--green); white-space: nowrap; }
+  .bar-wrap { flex: 1; height: 6px; background: var(--gray-200); border-radius: 20px; overflow: hidden; }
+  .bar-fill { height: 100%; background: var(--green); border-radius: 20px; transition: width 0.4s ease; width: 0%; }
+  .main { max-width: 680px; margin: 0 auto; padding: 20px 16px 0; }
+  .intro-card { background: #fff; border-radius: var(--radius); padding: 16px 18px; margin-bottom: 16px; border-left: 4px solid var(--green); font-size: 13px; color: var(--gray-700); line-height: 1.6; }
+  .intro-card strong { color: var(--green-dark); }
+  .nr-card { background: #fff; border-radius: var(--radius); margin-bottom: 12px; overflow: hidden; box-shadow: var(--shadow); border: 1px solid var(--gray-200); }
+  .nr-header { display: flex; align-items: center; gap: 10px; padding: 13px 16px; cursor: pointer; user-select: none; background: #fff; transition: background 0.15s; }
+  .nr-header:hover { background: var(--gray-100); }
+  .nr-icon { width: 34px; height: 34px; border-radius: 8px; background: var(--green-light); display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0; }
+  .nr-info { flex: 1; }
+  .nr-info .nr-num { font-size: 11px; font-weight: 600; color: var(--green); letter-spacing: 0.08em; }
+  .nr-info .nr-name { font-size: 14px; font-weight: 500; color: var(--gray-900); margin-top: 1px; }
+  .nr-badge { font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 500; background: var(--gray-100); color: var(--gray-400); flex-shrink: 0; transition: all 0.2s; }
+  .nr-badge.parcial { background: var(--amber-light); color: var(--amber); }
+  .nr-badge.completo { background: var(--green-light); color: var(--green-dark); }
+  .chevron { font-size: 18px; color: var(--gray-400); transition: transform 0.2s; flex-shrink: 0; }
+  .collapsed .chevron { transform: rotate(-90deg); }
+  .collapsed .nr-items { display: none; }
+  .nr-items { border-top: 1px solid var(--gray-200); padding: 6px 16px 14px; }
+  .item { display: flex; align-items: flex-start; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--gray-200); }
+  .item:last-child { border-bottom: none; }
+  .item-check { margin-top: 1px; width: 18px; height: 18px; accent-color: var(--green); cursor: pointer; flex-shrink: 0; }
+  .item-label { font-size: 13.5px; color: var(--gray-700); line-height: 1.5; cursor: pointer; flex: 1; }
+  .item-status { font-size: 11px; padding: 2px 8px; border-radius: 20px; flex-shrink: 0; margin-top: 2px; background: var(--red-light); color: var(--red); font-weight: 500; }
+  .item.done .item-status { background: var(--green-light); color: var(--green-dark); }
+  .item.done .item-label { color: #888; text-decoration: line-through; text-decoration-color: #bbb; }
+  .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+  .stat-card { background: #fff; border-radius: var(--radius); padding: 12px 14px; border: 1px solid var(--gray-200); text-align: center; }
+  .stat-card .val { font-size: 26px; font-weight: 600; }
+  .stat-card .lbl { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
+  .stat-card.s-conf .val { color: var(--green); }
+  .stat-card.s-pend .val { color: var(--red); }
+  .stat-card.s-total .val { color: var(--gray-700); }
+  .btn-wrap { padding: 8px 16px 0; max-width: 680px; margin: 0 auto; }
+  .btn-submit { width: 100%; padding: 14px; font-size: 15px; font-weight: 600; border-radius: var(--radius); border: none; background: var(--green); color: #fff; cursor: pointer; transition: background 0.2s, transform 0.1s; margin-top: 4px; }
+  .btn-submit:hover { background: var(--green-dark); }
+  .btn-submit:active { transform: scale(0.98); }
+  .btn-submit:disabled { background: var(--gray-200); color: var(--gray-400); cursor: not-allowed; }
+  .resultado { display: none; max-width: 680px; margin: 20px auto 0; padding: 0 16px; }
+  .resultado.visivel { display: block; }
+  .resultado-header { background: var(--green-dark); color: #fff; border-radius: var(--radius) var(--radius) 0 0; padding: 18px 20px 14px; }
+  .resultado-header h2 { font-size: 17px; font-weight: 600; margin-bottom: 4px; }
+  .resultado-header p { font-size: 12px; opacity: 0.8; }
+  .resultado-body { background: #fff; border: 1px solid var(--gray-200); border-top: none; border-radius: 0 0 var(--radius) var(--radius); padding: 18px 20px; }
+  .res-nr { margin-bottom: 16px; }
+  .res-nr-title { font-size: 13px; font-weight: 600; color: var(--green-dark); margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid var(--gray-200); }
+  .res-item { font-size: 13px; color: var(--gray-700); padding: 4px 0 4px 14px; position: relative; line-height: 1.4; }
+  .res-item::before { content: '•'; position: absolute; left: 0; color: var(--red); }
+  .res-ok { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--green-dark); font-weight: 500; padding: 12px 0; }
+  .send-box { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--gray-200); }
+  .send-box p { font-size: 13px; color: var(--gray-700); margin-bottom: 12px; line-height: 1.5; }
+  .btn-enviar-email { width: 100%; padding: 13px; font-size: 14px; font-weight: 600; border-radius: 8px; border: none; background: var(--green); color: #fff; cursor: pointer; transition: background 0.2s; }
+  .btn-enviar-email:hover { background: var(--green-dark); }
+  .btn-enviar-email:disabled { background: var(--gray-200); color: var(--gray-400); cursor: not-allowed; }
+  .status-envio { margin-top: 10px; text-align: center; font-size: 13px; font-weight: 500; min-height: 20px; }
+  .status-envio.ok { color: var(--green-dark); }
+  .status-envio.erro { color: var(--red); }
+  .status-envio.enviando { color: var(--amber); }
+  .footer { text-align: center; padding: 30px 16px 0; font-size: 11px; color: var(--gray-400); max-width: 680px; margin: 0 auto; }
+  .footer strong { color: var(--green-dark); }
+
+  /* BANNER de configuração — visível até o usuário preencher as chaves */
+  .config-banner { background: #fff3cd; border: 1px solid #ffc107; border-radius: var(--radius); padding: 14px 16px; margin-bottom: 16px; font-size: 13px; color: #664d03; line-height: 1.6; }
+  .config-banner strong { display: block; margin-bottom: 4px; font-size: 14px; }
+  .config-banner code { background: #ffe9a0; padding: 1px 5px; border-radius: 4px; font-family: monospace; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     ⚙️  CONFIGURAÇÃO EMAILJS — edite as 3 linhas abaixo
+     Instruções completas no banner amarelo da página
+     ============================================================ -->
+<script>
+  const EMAILJS_PUBLIC_KEY  = "COLE_SUA_PUBLIC_KEY_AQUI";
+  const EMAILJS_SERVICE_ID  = "COLE_SEU_SERVICE_ID_AQUI";
+  const EMAILJS_TEMPLATE_ID = "COLE_SEU_TEMPLATE_ID_AQUI";
+  const EMAIL_DESTINO       = "edgarambiental@yahoo.com.br";
+</script>
+<!-- ============================================================ -->
+
+<div class="header">
+  <span class="logo-tag">Vale Engenharia · Segurança do Trabalho</span>
+  <h1>Diagnóstico de Conformidade NRs</h1>
+  <p>Marque os itens que sua empresa já possui ou realiza. Ao final, envie o diagnóstico para nossa equipe.</p>
+  <span class="empresa-tag">🏗️ Moraes Concreto Serviços Administrativos Ltda</span>
+</div>
+
+<div class="progress-section">
+  <div class="progress-row">
+    <span class="progress-label">Progresso</span>
+    <div class="bar-wrap"><div class="bar-fill" id="bar"></div></div>
+    <span class="progress-pct" id="pct-top">0%</span>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- Banner de configuração — some depois de configurado -->
+  <div class="config-banner" id="config-banner">
+    <strong>⚙️ Instruções para ativar o envio de e-mail (só você vê isso)</strong>
+    1. Acesse <strong>emailjs.com</strong> → crie conta gratuita<br>
+    2. Em <strong>Email Services</strong> → Add Service → escolha Gmail/Yahoo → copie o <code>Service ID</code><br>
+    3. Em <strong>Email Templates</strong> → Create Template → use o nome <code>diagnostico_nr</code> → no corpo do e-mail coloque: <code>{{mensagem}}</code> → copie o <code>Template ID</code><br>
+    4. Em <strong>Account → Public Key</strong> → copie a chave<br>
+    5. Abra este arquivo HTML em qualquer editor de texto e substitua as 3 variáveis no topo:<br>
+    <code>EMAILJS_PUBLIC_KEY</code> · <code>EMAILJS_SERVICE_ID</code> · <code>EMAILJS_TEMPLATE_ID</code><br>
+    6. Salve e hospede no Netlify Drop (netlify.com/drop) — pronto!
+  </div>
+
+  <div class="intro-card">
+    <strong>Como preencher:</strong> Marque ✅ cada item que sua empresa <strong>já possui ou realiza</strong>. Deixe desmarcado o que está pendente ou não sabe informar. Ao final clique em <strong>Concluir e enviar diagnóstico</strong>.
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card s-total"><div class="val" id="s-total">40</div><div class="lbl">Total de itens</div></div>
+    <div class="stat-card s-conf"><div class="val" id="s-conf">0</div><div class="lbl">Conformes</div></div>
+    <div class="stat-card s-pend"><div class="val" id="s-pend">40</div><div class="lbl">Pendentes</div></div>
+  </div>
+
+  <div id="lista-nrs"></div>
+
+</div>
+
+<div class="btn-wrap">
+  <button class="btn-submit" onclick="gerarResultado()">✅ Concluir e enviar diagnóstico</button>
+</div>
+
+<div class="resultado" id="resultado">
+  <div class="resultado-header">
+    <h2 id="res-titulo">📋 Diagnóstico gerado</h2>
+    <p id="res-subtitulo"></p>
+  </div>
+  <div class="resultado-body">
+    <div id="res-conteudo"></div>
+    <div class="send-box">
+      <p>Clique abaixo para enviar o diagnóstico completo para a equipe da <strong>Vale Engenharia</strong>. Você receberá o plano de regularização em breve.</p>
+      <button class="btn-enviar-email" id="btn-email" onclick="enviarEmail()">📧 Enviar diagnóstico por e-mail</button>
+      <div class="status-envio" id="status-envio"></div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  <p>Diagnóstico elaborado por <strong>Vale Engenharia</strong> · Edgar Schlickmann · CREA-SC 88213-4</p>
+  <p style="margin-top:4px">Processo nº 0000150-74.2026.5.12.0045</p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script>
+const nrs = [
+  { nr:"NR-1", titulo:"Gerenciamento de Riscos", icone:"📄", itens:[
+    "Possui Programa de Gerenciamento de Riscos (PGR) atualizado?",
+    "Inventário de riscos ocupacionais foi elaborado e está documentado?",
+    "Existe um plano de ação com medidas de prevenção definido?",
+    "Os trabalhadores são informados sobre os riscos do ambiente de trabalho?"
+  ]},
+  { nr:"NR-5", titulo:"CIPA — Comissão Interna de Prevenção de Acidentes", icone:"👷", itens:[
+    "A empresa possui CIPA constituída e em funcionamento?",
+    "Os membros da CIPA foram treinados conforme exigência legal?",
+    "As atas de reuniões da CIPA são registradas e arquivadas?",
+    "O mapa de riscos foi elaborado e está afixado no estabelecimento?"
+  ]},
+  { nr:"NR-6", titulo:"EPI — Equipamentos de Proteção Individual", icone:"🦺", itens:[
+    "Os EPIs são fornecidos gratuitamente a todos os trabalhadores?",
+    "Todos os EPIs possuem CA (Certificado de Aprovação) válido?",
+    "Existe ficha de controle de entrega de EPI assinada pelos funcionários?",
+    "Os trabalhadores receberam treinamento para uso correto dos EPIs?"
+  ]},
+  { nr:"NR-7", titulo:"PCMSO — Controle Médico de Saúde Ocupacional", icone:"🩺", itens:[
+    "Possui PCMSO elaborado por médico do trabalho?",
+    "Exames admissionais são realizados antes do início das atividades?",
+    "Exames periódicos estão em dia para todos os funcionários?",
+    "Exames demissionais são realizados no desligamento dos colaboradores?"
+  ]},
+  { nr:"NR-9", titulo:"Avaliação e Controle das Exposições Ocupacionais", icone:"🔬", itens:[
+    "Avaliações de agentes físicos (ruído, calor, vibração) foram realizadas?",
+    "Avaliações de agentes químicos (poeiras, gases) foram realizadas?",
+    "Existem medidas de controle para exposições acima do limite permitido?",
+    "Os resultados das avaliações estão integrados ao PGR?"
+  ]},
+  { nr:"NR-10", titulo:"Segurança em Instalações Elétricas", icone:"⚡", itens:[
+    "Trabalhadores que operam instalações elétricas possuem treinamento NR-10?",
+    "O prontuário das instalações elétricas está atualizado?",
+    "Procedimentos de bloqueio e etiquetagem (LOTO) estão implementados?",
+    "EPIs específicos para trabalhos elétricos estão disponíveis?"
+  ]},
+  { nr:"NR-15", titulo:"Atividades e Operações Insalubres", icone:"⚠️", itens:[
+    "Foi realizado levantamento das atividades insalubres na empresa?",
+    "Existe laudo técnico de insalubridade elaborado por profissional habilitado?",
+    "O adicional de insalubridade é pago corretamente quando devido?",
+    "Medidas para eliminar ou neutralizar a insalubridade foram adotadas?"
+  ]},
+  { nr:"NR-16", titulo:"Atividades e Operações Perigosas", icone:"🔥", itens:[
+    "Foi verificado se há atividades enquadradas como perigosas (inflamáveis, eletricidade)?",
+    "Existe laudo técnico de periculosidade elaborado (se aplicável)?",
+    "O adicional de periculosidade é pago quando devido?",
+    "Medidas de controle para atividades perigosas foram implementadas?"
+  ]},
+  { nr:"NR-23", titulo:"Proteção Contra Incêndios", icone:"🧯", itens:[
+    "Extintores estão em quantidade suficiente, sinalizados e dentro da validade?",
+    "As saídas de emergência estão desobstruídas e sinalizadas?",
+    "Existe plano de emergência e abandono elaborado?",
+    "A brigada de incêndio está constituída e foi treinada?"
+  ]},
+  { nr:"NR-24", titulo:"Condições Sanitárias e de Conforto", icone:"🏢", itens:[
+    "Banheiros em quantidade adequada, limpos e com separação por sexo?",
+    "Existe local adequado para refeições disponível?",
+    "Vestiários adequados estão disponíveis (quando aplicável)?",
+    "Bebedouros com água potável em quantidade suficiente?"
+  ]}
+];
+
+// Oculta banner se já configurado
+window.addEventListener('DOMContentLoaded', () => {
+  if (EMAILJS_PUBLIC_KEY !== "COLE_SUA_PUBLIC_KEY_AQUI") {
+    document.getElementById('config-banner').style.display = 'none';
+    emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+  }
+});
+
+const lista = document.getElementById('lista-nrs');
+nrs.forEach((nr, i) => {
+  const card = document.createElement('div');
+  card.className = 'nr-card';
+  card.innerHTML = `
+    <div class="nr-header" onclick="this.closest('.nr-card').classList.toggle('collapsed')">
+      <div class="nr-icon">${nr.icone}</div>
+      <div class="nr-info">
+        <div class="nr-num">${nr.nr}</div>
+        <div class="nr-name">${nr.titulo}</div>
+      </div>
+      <span class="nr-badge" id="badge-${i}">0/${nr.itens.length}</span>
+      <span class="chevron">›</span>
+    </div>
+    <div class="nr-items" id="items-${i}">
+      ${nr.itens.map((it, j) => `
+        <div class="item" id="item-${i}-${j}">
+          <input type="checkbox" class="item-check" id="cb-${i}-${j}" onchange="atualizar()">
+          <label class="item-label" for="cb-${i}-${j}">${it}</label>
+          <span class="item-status" id="st-${i}-${j}">Pendente</span>
+        </div>
+      `).join('')}
+    </div>`;
+  lista.appendChild(card);
+  if (i > 0) card.classList.add('collapsed');
+});
+
+function atualizar() {
+  let total = 0, conf = 0;
+  nrs.forEach((nr, i) => {
+    let nrConf = 0;
+    nr.itens.forEach((_, j) => {
+      const cb = document.getElementById(`cb-${i}-${j}`);
+      const item = document.getElementById(`item-${i}-${j}`);
+      const st = document.getElementById(`st-${i}-${j}`);
+      total++;
+      if (cb.checked) { conf++; nrConf++; item.classList.add('done'); st.textContent = 'Conforme'; }
+      else { item.classList.remove('done'); st.textContent = 'Pendente'; }
+    });
+    const badge = document.getElementById(`badge-${i}`);
+    badge.textContent = `${nrConf}/${nr.itens.length}`;
+    badge.className = 'nr-badge' + (nrConf === nr.itens.length ? ' completo' : nrConf > 0 ? ' parcial' : '');
+  });
+  const pct = Math.round((conf / total) * 100);
+  document.getElementById('bar').style.width = pct + '%';
+  document.getElementById('pct-top').textContent = pct + '%';
+  document.getElementById('s-conf').textContent = conf;
+  document.getElementById('s-pend').textContent = total - conf;
+}
+
+let textoEmail = '';
+
+function gerarResultado() {
+  let conf = 0, pend = 0;
+  const pendentes = [], conformes = [];
+  nrs.forEach((nr, i) => {
+    const nrPend = [], nrConf = [];
+    nr.itens.forEach((it, j) => {
+      const cb = document.getElementById(`cb-${i}-${j}`);
+      if (cb.checked) { conf++; nrConf.push(it); }
+      else { pend++; nrPend.push(it); }
+    });
+    if (nrPend.length) pendentes.push({ nr: nr.nr, titulo: nr.titulo, itens: nrPend });
+    if (nrConf.length) conformes.push({ nr: nr.nr, titulo: nr.titulo, itens: nrConf });
+  });
+
+  const total = conf + pend;
+  const pct = Math.round((conf / total) * 100);
+  const data = new Date().toLocaleDateString('pt-BR');
+
+  const resTitulo = document.getElementById('res-titulo');
+  const resSub = document.getElementById('res-subtitulo');
+  const resConteudo = document.getElementById('res-conteudo');
+
+  resTitulo.textContent = pct >= 80 ? '✅ Boa conformidade' : pct >= 50 ? '⚠️ Conformidade parcial' : '🔴 Atenção necessária';
+  resSub.textContent = `${conf} conformes · ${pend} pendentes · ${pct}% de conformidade`;
+
+  let html = '';
+  if (pend === 0) {
+    html = `<div class="res-ok">✅ Todos os itens foram marcados como conformes!</div>`;
+  } else {
+    html += `<div style="font-size:13px;color:#555;margin-bottom:14px;line-height:1.5">Itens <strong>pendentes de regularização</strong> identificados:</div>`;
+    pendentes.forEach(p => {
+      html += `<div class="res-nr"><div class="res-nr-title">${p.nr} — ${p.titulo}</div>`;
+      p.itens.forEach(it => { html += `<div class="res-item">${it}</div>`; });
+      html += `</div>`;
+    });
+  }
+  resConteudo.innerHTML = html;
+
+  // Monta texto do e-mail
+  textoEmail  = `DIAGNÓSTICO DE CONFORMIDADE NRs\n`;
+  textoEmail += `Empresa: Moraes Concreto Serviços Administrativos Ltda\n`;
+  textoEmail += `Data: ${data}\n`;
+  textoEmail += `Conformidade geral: ${pct}% (${conf}/${total} itens)\n`;
+  textoEmail += `${'='.repeat(50)}\n\n`;
+  if (pend === 0) {
+    textoEmail += `✅ TODOS OS ITENS ESTÃO CONFORMES!\n`;
+  } else {
+    textoEmail += `🔴 ITENS PENDENTES DE REGULARIZAÇÃO:\n\n`;
+    pendentes.forEach(p => {
+      textoEmail += `[ ${p.nr} — ${p.titulo} ]\n`;
+      p.itens.forEach(it => { textoEmail += `  • ${it}\n`; });
+      textoEmail += `\n`;
+    });
+    textoEmail += `${'─'.repeat(50)}\n`;
+    textoEmail += `✅ ITENS CONFORMES:\n\n`;
+    conformes.forEach(p => {
+      textoEmail += `[ ${p.nr} — ${p.titulo} ]\n`;
+      p.itens.forEach(it => { textoEmail += `  ✓ ${it}\n`; });
+      textoEmail += `\n`;
+    });
+  }
+  textoEmail += `${'='.repeat(50)}\n`;
+  textoEmail += `Vale Engenharia · Edgar Schlickmann · CREA-SC 88213-4\n`;
+  textoEmail += `Processo: 0000150-74.2026.5.12.0045`;
+
+  document.getElementById('resultado').classList.add('visivel');
+  document.getElementById('resultado').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function enviarEmail() {
+  const btn = document.getElementById('btn-email');
+  const status = document.getElementById('status-envio');
+
+  if (EMAILJS_PUBLIC_KEY === "COLE_SUA_PUBLIC_KEY_AQUI") {
+    status.className = 'status-envio erro';
+    status.textContent = '⚠️ Configure as chaves do EmailJS no arquivo HTML antes de usar.';
+    return;
+  }
+
+  btn.disabled = true;
+  status.className = 'status-envio enviando';
+  status.textContent = '⏳ Enviando diagnóstico...';
+
+  try {
+    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+      para_email: EMAIL_DESTINO,
+      assunto: 'Diagnóstico NRs — Moraes Concreto',
+      mensagem: textoEmail
+    });
+    status.className = 'status-envio ok';
+    status.textContent = '✅ Diagnóstico enviado com sucesso! A Vale Engenharia entrará em contato.';
+    btn.textContent = '✅ Enviado!';
+  } catch (err) {
+    status.className = 'status-envio erro';
+    status.textContent = '❌ Erro ao enviar. Tente novamente ou entre em contato pelo (48) 991270675.';
+    btn.disabled = false;
+    console.error(err);
+  }
+}
+
+atualizar();
+</script>
+</body>
+</html>
