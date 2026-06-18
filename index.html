@@ -368,8 +368,10 @@ async function enviarEmail() {
 
   try {
     await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-      para_email: EMAIL_DESTINO,
-      assunto: 'Diagnóstico NRs — Moraes Concreto',
+      to_email: EMAIL_DESTINO,
+      to_name: 'Edgar Schlickmann',
+      from_name: 'Checklist NRs',
+      reply_to: EMAIL_DESTINO,
       mensagem: textoEmail
     });
     status.className = 'status-envio ok';
