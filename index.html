@@ -85,10 +85,7 @@
   .footer { text-align: center; padding: 30px 16px 0; font-size: 11px; color: var(--gray-400); max-width: 680px; margin: 0 auto; }
   .footer strong { color: var(--green-dark); }
 
-  /* BANNER de configuração — visível até o usuário preencher as chaves */
-  .config-banner { background: #fff3cd; border: 1px solid #ffc107; border-radius: var(--radius); padding: 14px 16px; margin-bottom: 16px; font-size: 13px; color: #664d03; line-height: 1.6; }
-  .config-banner strong { display: block; margin-bottom: 4px; font-size: 14px; }
-  .config-banner code { background: #ffe9a0; padding: 1px 5px; border-radius: 4px; font-family: monospace; font-size: 12px; }
+
 </style>
 </head>
 <body>
@@ -122,17 +119,7 @@
 
 <div class="main">
 
-  <!-- Banner de configuração — some depois de configurado -->
-  <div class="config-banner" id="config-banner">
-    <strong>⚙️ Instruções para ativar o envio de e-mail (só você vê isso)</strong>
-    1. Acesse <strong>emailjs.com</strong> → crie conta gratuita<br>
-    2. Em <strong>Email Services</strong> → Add Service → escolha Gmail/Yahoo → copie o <code>Service ID</code><br>
-    3. Em <strong>Email Templates</strong> → Create Template → use o nome <code>diagnostico_nr</code> → no corpo do e-mail coloque: <code>{{mensagem}}</code> → copie o <code>Template ID</code><br>
-    4. Em <strong>Account → Public Key</strong> → copie a chave<br>
-    5. Abra este arquivo HTML em qualquer editor de texto e substitua as 3 variáveis no topo:<br>
-    <code>EMAILJS_PUBLIC_KEY</code> · <code>EMAILJS_SERVICE_ID</code> · <code>EMAILJS_TEMPLATE_ID</code><br>
-    6. Salve e hospede no Netlify Drop (netlify.com/drop) — pronto!
-  </div>
+
 
   <div class="intro-card">
     <strong>Como preencher:</strong> Marque ✅ cada item que sua empresa <strong>já possui ou realiza</strong>. Deixe desmarcado o que está pendente ou não sabe informar. Ao final clique em <strong>Concluir e enviar diagnóstico</strong>.
@@ -237,10 +224,9 @@ const nrs = [
   ]}
 ];
 
-// Oculta banner se já configurado
+// Inicializa EmailJS se configurado
 window.addEventListener('DOMContentLoaded', () => {
   if (EMAILJS_PUBLIC_KEY !== "COLE_SUA_PUBLIC_KEY_AQUI") {
-    document.getElementById('config-banner').style.display = 'none';
     emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
   }
 });
